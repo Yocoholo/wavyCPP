@@ -1,3 +1,5 @@
+@REM  rebuild.bat rebuilds BGFX for MINGW and also recompiles shaders.
+
 cd submodules\bgfx
 call make mingw-gcc-release64
 cd ..\..

@@ -1,5 +1,8 @@
 @echo off
 
+@REM  compile_shaders.bat makes use of the shaderc executable from BGFX 
+@REM    and compiles the src/shaders/ into bin files for loading into the BGFX program
+
 set PATH=.\build\shaders\dx11
 set FRAGMENT_SHADER=fs_wavy.bin
 set VERTEX_SHADER=vs_wavy.bin
