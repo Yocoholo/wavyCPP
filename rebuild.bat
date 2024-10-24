@@ -2,6 +2,7 @@
 
 cd submodules\bgfx
 call make mingw-gcc-release64
+call make mingw-gcc-debug64
 cd ..\..
 
 call compile_shaders.bat

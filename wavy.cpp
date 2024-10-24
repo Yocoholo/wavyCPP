@@ -144,7 +144,7 @@ namespace
             m_debug = BGFX_DEBUG_TEXT;
             m_reset = BGFX_RESET_VSYNC;
             std::cout << "width: " << _width << " height: " << _height << std::endl;
-            
+
             y_ar = m_eye_z * float(HEIGHT) / float(WIDTH);
 
             bgfx::Init init;
@@ -190,7 +190,7 @@ namespace
 
             m_timeOffset = bx::getHPCounter();
             imguiCreate();
-            
+
         }
 
         virtual int shutdown() override
@@ -208,14 +208,14 @@ namespace
         }
 
         bool update() override
-        {  
+        {
 
             if (!entry::processEvents(WIDTH, HEIGHT, m_debug, m_reset, &m_mouseState))
             {
                 imguiBeginFrame(m_mouseState.m_mx, m_mouseState.m_my, (m_mouseState.m_buttons[entry::MouseButton::Left] ? IMGUI_MBUT_LEFT : 0) | (m_mouseState.m_buttons[entry::MouseButton::Right] ? IMGUI_MBUT_RIGHT : 0) | (m_mouseState.m_buttons[entry::MouseButton::Middle] ? IMGUI_MBUT_MIDDLE : 0), m_mouseState.m_mz, uint16_t(WIDTH), uint16_t(HEIGHT));
                 // showExampleDialog(this);
                 imguiEndFrame();
-                
+
                 if (old_width != WIDTH || old_height != HEIGHT) update_view();
 
                 // This dummy draw call is here to make sure that view 0 is cleared
@@ -283,7 +283,7 @@ namespace
         }
 
         void drawLine(uint64_t state, float startX, float startY, float endX, float endY){
-            
+
             bgfx::TransientVertexBuffer tvb;
             bgfx::TransientIndexBuffer tib;
 
@@ -304,7 +304,7 @@ namespace
 
             indicies[0] = 0;
             indicies[1] = 1;
-            
+
             float brightness[16] = {1.0f, 0.0f, 0.0f, 0.0f};
             bgfx::setUniform(u_brightness, brightness);
 
@@ -322,19 +322,19 @@ namespace
 
         int getOperation(int index){
             // make the op bin flag for choosing the operation
-           return (dots[index].value                >= 0.5f ? 1 : 0) 
-                + (dots[index +1].value             >= 0.5f ? 2 : 0) 
-                + (dots[index + x_count +1].value   >= 0.5f ? 4 : 0) 
+           return (dots[index].value                >= 0.5f ? 1 : 0)
+                + (dots[index +1].value             >= 0.5f ? 2 : 0)
+                + (dots[index + x_count +1].value   >= 0.5f ? 4 : 0)
                 + (dots[index + x_count].value      >= 0.5f ? 8 : 0);
         }
 
         float mid(dot* d1, dot* d2, bool x){
             // Offset v1 to avoid midpoint being 0 and causing a divide by 0 issue.
             float v1 = x ? d1->x : d1->y;
-            float v2 = x ? d2->x : d2->y; 
+            float v2 = x ? d2->x : d2->y;
             return (v1*d1->value + v2*d2->value)/(d1->value + d2->value);
         }
-        
+
         #define upX mid(&dots[index], &dots[index + 1], true);
         #define upY dots[index].y;
         #define downX mid(&dots[index + x_count], &dots[index + x_count +1], true);
@@ -441,7 +441,7 @@ namespace
 
             const bx::Vec3 at = {0.0f, 0.0f, 0.0f};
             const bx::Vec3 eye = {0.0f, 0.0f, -m_eye_z};
-            
+
             float proj[16];
             float view[16];
             float inv_proj[16];
@@ -451,9 +451,9 @@ namespace
                 bx::mtxLookAt(view, eye, at);
 
                 bx::mtxProj(proj, fov, float(WIDTH) / float(HEIGHT), 0.1f, 100.0f, bgfx::getCaps()->homogeneousDepth);
-                
+
                 bgfx::setViewTransform(main_view_id, view, proj);
-                
+
                 // This is set to determine the size of the drawable surface
                 bgfx::setViewRect(main_view_id, 0, 0, uint16_t(WIDTH), uint16_t(HEIGHT));
             }
@@ -483,7 +483,7 @@ namespace
         float getY(int y){
             return (bound * y_ar * (HEIGHT - 2*(float(y) * (float(HEIGHT)/float(y_count-1))))) / HEIGHT;
         }
-        
+
         entry::MouseState m_mouseState;
 
         uint32_t m_debug;
