@@ -1,6 +1,6 @@
 @echo off
 
-@REM  compile_shaders.bat makes use of the shaderc executable from BGFX 
+@REM  compile_shaders.bat makes use of the shaderc executable from BGFX
 @REM    and compiles the src/shaders/ into bin files for loading into the BGFX program
 
 set PATH=.\build\shaders\dx11
@@ -11,8 +11,7 @@ set VERTEX_SHADER_SRC=.\src\shaders\vs_wavy.sc
 set VARYING_DEF_SRC=.\src\shaders\varying.def.sc
 
 :loop
-set /p message="Enter message: "
-cls
+set /p message="Enter to build | Any key to quit"
 
 if "%message%"=="" (
   submodules\bgfx\.build\win64_mingw-gcc\bin\shadercRelease.exe ^

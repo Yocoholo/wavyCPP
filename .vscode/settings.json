@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        "*.acs": "lua",
         "array": "cpp",
         "deque": "cpp",
         "list": "cpp",
@@ -53,6 +54,8 @@
         "streambuf": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "regex": "cpp"
-    }
+        "regex": "cpp",
+        "fstream": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "enabled"
 }

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.0)
 
 project(wavy VERSION 0.1.0)
 
-add_executable(wavy wavy.cpp)
+add_executable(wavy src/wavy.cpp)
 # add_executable(wavy cubes.cpp)
 
 #           DOWNLOAD ALL THE SUBMODULES
@@ -40,7 +40,11 @@ if(NOT EXISTS "${PROJECT_SOURCE_DIR}/submodules/bnet/makefile")
 endif()
 
 option(BX_CONFIG_DEBUG "Log debug messages (default: on in debug)" OFF)
-target_include_directories(wavy PRIVATE src)
+target_include_directories(wavy
+PRIVATE
+  src
+  include
+)
 
 #include dirs
 target_include_directories(wavy
