@@ -1,13 +1,14 @@
-#include <helpers.cpp>
+#pragma once
+
+#include "helpers.h"
 #include <string>
 #include <iostream>
-#include <conio.h>
 #include "common.h"
 #include "bgfx_utils.h"
 #include "imgui/imgui.h"
 #include <bx/uint32_t.h>
-#include <OpenSimplex.cpp>
-#include <math.h>
+#include "OpenSimplex.hpp"
+#include <cmath>
 
 struct PosColor {
   float m_x;
@@ -21,12 +22,7 @@ struct PosColor {
 void createCircleVB(bgfx::VertexBufferHandle* _result, float radius,
                     uint32_t color, uint16_t segments);
 void createCircleIB(bgfx::IndexBufferHandle* _result, uint16_t segments);
-void createLineVertices(PosColor*& vertices, uint16_t verticesCount,
-                        float startX, float startY, float endX, float endY,
-                        float m_line_thickness, uint16_t segments,
-                        uint32_t color);
-void createLineIndicies(uint16_t*& indicies, uint16_t& indiciesCount,
-                        uint16_t verticesCount);
+
 struct dot {
     float x;
     float y;
@@ -48,15 +44,6 @@ struct dot {
     }
 };
 
-#define upX mid(&dots[index], &dots[index + 1], true);
-#define upY dots[index].y;
-#define downX mid(&dots[index + x_count], &dots[index + x_count +1], true);
-#define downY dots[index + x_count].y;
-#define leftX dots[index].x;
-#define leftY mid(&dots[index], &dots[index + x_count], false);
-#define rightX dots[index +1].x;
-#define rightY mid(&dots[index + 1], &dots[index + x_count +1], false);
-
 class Wavy : public entry::AppI {
  public:
   Wavy(const char* _name, const char* _description, const char* _url);
@@ -67,13 +54,11 @@ class Wavy : public entry::AppI {
   bool update() override;
 
  private:
-  void drawCircles(float time, uint64_t state);
-  void drawCircle(dot* dot, float time, uint64_t state);
-  void drawLines(uint64_t state);
-  void drawLine(uint64_t state, float startX, float startY, float endX,
-                float endY);
+  void updateDots(float time);
+  void drawCirclesInstanced(uint64_t state);
+  void drawLinesBatched(uint64_t state);
   int getOperation(int index);
-  float mid(dot* d1, dot* d2, bool x);
+  float mid(const dot* d1, const dot* d2, bool x) const;
   void getLinePos(int index, float* pos);
   void makeDots(dot*& dots, int* dot_count);
   void update_view();
@@ -81,10 +66,21 @@ class Wavy : public entry::AppI {
   float getX(int x);
   float getY(int y);
 
+  // Edge interpolation helpers for marching squares
+  float edgeUpX(int index);
+  float edgeUpY(int index);
+  float edgeDownX(int index);
+  float edgeDownY(int index);
+  float edgeLeftX(int index);
+  float edgeLeftY(int index);
+  float edgeRightX(int index);
+  float edgeRightY(int index);
+
   entry::MouseState m_mouseState;
   uint32_t m_debug;
   uint32_t m_reset;
   bgfx::ProgramHandle m_program;
+  bgfx::ProgramHandle m_program_inst;
   bgfx::VertexBufferHandle m_vbh;
   bgfx::IndexBufferHandle m_ibh;
   uint32_t WIDTH;
@@ -92,10 +88,8 @@ class Wavy : public entry::AppI {
   uint32_t old_width;
   uint32_t old_height;
   int64_t m_timeOffset;
-  PosColor* all_dots_pos_color;
   OpenSimplex noise;
   dot* dots;
-  bgfx::UniformHandle u_brightness;
   const bgfx::ViewId main_view_id;
   const uint64_t state;
   const uint32_t dot_color;
@@ -110,9 +104,4 @@ class Wavy : public entry::AppI {
   float fov;
   float bound;
   float y_ar;
-  int32_t m_pt;
-  bool m_r;
-  bool m_g;
-  bool m_b;
-  bool m_a;
 };
