@@ -139,6 +139,10 @@ void Wavy::updateDots(float time) {
 }
 
 void Wavy::drawCirclesInstanced(uint64_t state) {
+    // Remove face culling — 2D circles have no meaningful back-face,
+    // and winding conventions differ between renderers (DX11 vs GL).
+    state = (state & ~BGFX_STATE_CULL_MASK);
+
     const uint16_t instanceStride = 80; // 64 (4x4 matrix) + 16 (vec4 instance data)
     uint32_t numInstances = (uint32_t)dot_count;
     uint32_t availInstances = bgfx::getAvailInstanceDataBuffer(numInstances, instanceStride);
