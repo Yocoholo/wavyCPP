@@ -15,7 +15,7 @@ struct PosColor {
 
 class Renderer {
 public:
-    Renderer(bgfx::ViewId viewId, float radius, uint32_t dotColor, uint16_t dotSegments);
+    Renderer(bgfx::ViewId viewId, float radiusScale, uint32_t dotColor);
 
     void init();
     void shutdown();
@@ -26,17 +26,18 @@ public:
     void updateView(uint32_t width, uint32_t height, float eyeZ, float fov,
                     float yAR, float& outBound);
 
-    bgfx::ProgramHandle lineProgram()     const { return m_program; }
-    bgfx::ProgramHandle instanceProgram() const { return m_programInst; }
+    bgfx::ProgramHandle lineProgram() const { return m_program; }
+    bgfx::ProgramHandle dotProgram()  const { return m_programDot; }
 
 private:
-    bgfx::ViewId             m_viewId;
-    bgfx::ProgramHandle      m_program;
-    bgfx::ProgramHandle      m_programInst;
-    bgfx::VertexBufferHandle m_vbh;
-    bgfx::IndexBufferHandle  m_ibh;
+    bgfx::ViewId                    m_viewId;
+    bgfx::ProgramHandle             m_program;
+    bgfx::ProgramHandle             m_programDot;
+    bgfx::VertexBufferHandle        m_vbh;
+    bgfx::IndexBufferHandle         m_ibh;
+    bgfx::DynamicVertexBufferHandle m_instanceBuf;
+    bgfx::VertexLayout              m_instanceLayout;
 
-    float    m_radius;
+    float    m_radiusScale;  // fraction of dot spacing
     uint32_t m_dotColor;
-    uint16_t m_dotSegments;
 };

@@ -2,6 +2,11 @@
 #include "bgfx_utils.h"
 #include <bx/timer.h>
 
+#define NUM_DOTS 1000
+#define ANIMATION_SPEED 0.4f
+#define EYE_Z 15.0f
+#define FOV 120.0f
+
 Wavy::Wavy(const char* _name, const char* _description, const char* _url)
     : entry::AppI(_name, _description, _url),
       m_viewId(0),
@@ -10,9 +15,9 @@ Wavy::Wavy(const char* _name, const char* _description, const char* _url)
           | BGFX_STATE_WRITE_B | BGFX_STATE_WRITE_A
           | BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS
           | BGFX_STATE_CULL_CW | BGFX_STATE_MSAA),
-      m_timeMult(0.4f),
-      m_grid(267, 15.0f, 120.0f),
-      m_renderer(0, 0.1f, 0xffffffff, 10) {}
+      m_timeMult(ANIMATION_SPEED),
+      m_grid(NUM_DOTS, EYE_Z, FOV),
+      m_renderer(0, 0.3f, 0xffffffff) {}
 
 void Wavy::init(int32_t _argc, const char* const* _argv,
                 uint32_t _width, uint32_t _height) {

@@ -15,66 +15,62 @@ void PosColor::init() {
         .end();
 }
 
-// ── Circle mesh helpers ─────────────────────────────────────────────────────
+// ── Unit quad mesh (for GPU SDF circle rendering) ───────────────────────────
 
-static void createCircleVB(bgfx::VertexBufferHandle* result, float radius,
-                           uint32_t color, uint16_t segments) {
-    uint16_t  numVertices = segments + 1;
-    uint32_t  size        = numVertices * sizeof(PosColor);
-    PosColor* vertex      = new PosColor[numVertices];
-    vertex[0]             = PosColor{0.0f, 0.0f, color};
-    float angleStep       = 2.0f * float(M_PI) / segments;
-    float angle           = 0.0f;
-    for (uint16_t i = 1; i <= segments; i++) {
-        vertex[i] = PosColor{radius * cosf(angle), radius * sinf(angle), color};
-        angle += angleStep;
-    }
-    *result = bgfx::createVertexBuffer(bgfx::copy(vertex, size), PosColor::ms_layout);
-    delete[] vertex;
+static void createQuadVB(bgfx::VertexBufferHandle* result, uint32_t color) {
+    // Unit quad: corners at (-1,-1) to (1,1)
+    // The vertex shader scales by radius and translates to world position.
+    // The fragment shader uses UV (-1..1) for SDF circle test.
+    PosColor vertices[4] = {
+        { -1.0f, -1.0f, color },  // bottom-left
+        {  1.0f, -1.0f, color },  // bottom-right
+        {  1.0f,  1.0f, color },  // top-right
+        { -1.0f,  1.0f, color },  // top-left
+    };
+    *result = bgfx::createVertexBuffer(
+        bgfx::copy(vertices, sizeof(vertices)), PosColor::ms_layout);
 }
 
-static void createCircleIB(bgfx::IndexBufferHandle* result, uint16_t segments) {
-    uint16_t  numIndices = segments * 3;
-    uint32_t  size       = numIndices * sizeof(uint16_t);
-    uint16_t* index      = new uint16_t[numIndices];
-    int       offset     = 0;
-    for (uint16_t i = 0; i < segments; i++) {
-        index[offset]     = 0;
-        index[offset + 1] = i + 1;
-        index[offset + 2] = i + 2;
-        offset += 3;
-    }
-    index[numIndices - 1] = 1;
-    *result = bgfx::createIndexBuffer(bgfx::copy(index, size));
-    delete[] index;
+static void createQuadIB(bgfx::IndexBufferHandle* result) {
+    uint16_t indices[6] = { 0, 1, 2, 0, 2, 3 };
+    *result = bgfx::createIndexBuffer(bgfx::copy(indices, sizeof(indices)));
 }
 
 // ── Renderer ────────────────────────────────────────────────────────────────
 
-Renderer::Renderer(bgfx::ViewId viewId, float radius, uint32_t dotColor, uint16_t dotSegments)
-    : m_viewId(viewId), m_radius(radius), m_dotColor(dotColor), m_dotSegments(dotSegments) {
+Renderer::Renderer(bgfx::ViewId viewId, float radiusScale, uint32_t dotColor)
+    : m_viewId(viewId), m_radiusScale(radiusScale), m_dotColor(dotColor) {
     m_program.idx     = bgfx::kInvalidHandle;
-    m_programInst.idx = bgfx::kInvalidHandle;
+    m_programDot.idx  = bgfx::kInvalidHandle;
     m_vbh.idx         = bgfx::kInvalidHandle;
     m_ibh.idx         = bgfx::kInvalidHandle;
+    m_instanceBuf.idx = bgfx::kInvalidHandle;
 }
 
 void Renderer::init() {
     PosColor::init();
-    createCircleVB(&m_vbh, m_radius, m_dotColor, m_dotSegments);
-    createCircleIB(&m_ibh, m_dotSegments);
+    createQuadVB(&m_vbh, m_dotColor);
+    createQuadIB(&m_ibh);
+
+    // Instance data layout: one vec4 (x, y, brightness, radius) per dot
+    m_instanceLayout.begin()
+        .add(bgfx::Attrib::TexCoord7, 4, bgfx::AttribType::Float)
+        .end();
+    m_instanceBuf = bgfx::createDynamicVertexBuffer(
+        1, m_instanceLayout, BGFX_BUFFER_ALLOW_RESIZE);
 
     debug_info("Loading shaders...");
     m_program     = loadProgram("vs_wavy", "fs_wavy");
-    m_programInst = loadProgram("vs_wavy_inst", "fs_wavy");
+    m_programDot  = loadProgram("vs_wavy_dot", "fs_wavy_dot");
     debug_info("Shaders loaded");
 }
 
 void Renderer::shutdown() {
+    if (bgfx::isValid(m_instanceBuf)) bgfx::destroy(m_instanceBuf);
     if (bgfx::isValid(m_ibh))         bgfx::destroy(m_ibh);
     if (bgfx::isValid(m_vbh))         bgfx::destroy(m_vbh);
     if (bgfx::isValid(m_program))     bgfx::destroy(m_program);
-    if (bgfx::isValid(m_programInst)) bgfx::destroy(m_programInst);
+    if (bgfx::isValid(m_programDot))  bgfx::destroy(m_programDot);
 }
 
 void Renderer::updateView(uint32_t width, uint32_t height, float eyeZ, float fov,
@@ -98,38 +94,36 @@ void Renderer::updateView(uint32_t width, uint32_t height, float eyeZ, float fov
 }
 
 void Renderer::drawCirclesInstanced(const Grid& grid, uint64_t state) {
-    // Remove face culling — 2D circles have no meaningful back-face
+    // Remove face culling — 2D quads have no meaningful back-face
     state = (state & ~BGFX_STATE_CULL_MASK);
 
-    const uint16_t instanceStride = 80; // 64 (4x4 matrix) + 16 (vec4 instance data)
-    uint32_t numInstances = (uint32_t)grid.dotCount();
-    uint32_t avail = bgfx::getAvailInstanceDataBuffer(numInstances, instanceStride);
-    numInstances = (numInstances < avail) ? numInstances : avail;
-    if (numInstances == 0) return;
-
-    bgfx::InstanceDataBuffer idb;
-    bgfx::allocInstanceDataBuffer(&idb, numInstances, instanceStride);
-
     const Dot* dots = grid.dots();
-    uint8_t* data = idb.data;
-    for (uint32_t i = 0; i < numInstances; i++) {
-        float* mtx = (float*)data;
-        bx::mtxTranslate(mtx, dots[i].x, dots[i].y, 0.0f);
+    uint32_t numDots = (uint32_t)grid.dotCount();
+    if (numDots == 0) return;
 
-        float* extra = (float*)&data[64];
-        extra[0] = dots[i].value;
-        extra[1] = 0.0f;
-        extra[2] = 0.0f;
-        extra[3] = 0.0f;
+    // Auto-scale radius from grid spacing so dots look right at any density
+    float spacing = 2.0f * grid.bound() * grid.eyeZ() / float(grid.xCount() - 1);
+    float radius  = spacing * m_radiusScale;
 
-        data += instanceStride;
+    // Fill the dynamic instance buffer (resizes automatically)
+    const bgfx::Memory* mem = bgfx::alloc(numDots * 16);
+    float* data = (float*)mem->data;
+    for (uint32_t i = 0; i < numDots; i++) {
+        const Dot& dot = dots[i];
+        data[0] = dot.x;
+        data[1] = dot.y;
+        data[2] = dot.value;
+        data[3] = radius;
+        data += 4;
     }
+    bgfx::update(m_instanceBuf, 0, mem);
 
+    // Single draw call for all dots — no transient buffer limits
     bgfx::setVertexBuffer(0, m_vbh);
     bgfx::setIndexBuffer(m_ibh);
-    bgfx::setInstanceDataBuffer(&idb);
+    bgfx::setInstanceDataBuffer(m_instanceBuf, 0, numDots);
     bgfx::setState(state);
-    bgfx::submit(m_viewId, m_programInst);
+    bgfx::submit(m_viewId, m_programDot);
 }
 
 void Renderer::drawLinesBatched(const Grid& grid, uint64_t state) {
