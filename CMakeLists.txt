@@ -112,13 +112,17 @@ endif()
 # Wavy executable
 # ═════════════════════════════════════════════════════════════════════════════
 add_executable(wavy
-  src/wavy.cpp
+  src/main.cpp
+  src/grid.cpp
+  src/renderer.cpp
+  src/marching_squares.cpp
   src/helpers.cpp
   src/OpenSimplex.cpp
 )
 
 target_include_directories(wavy PRIVATE
   src
+  ./include
   ${BGFX_DIR}/include
   ${PROJECT_SOURCE_DIR}/submodules/bx/include
   ${PROJECT_SOURCE_DIR}/submodules/bimg/include
